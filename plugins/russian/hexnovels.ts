@@ -1,13 +1,13 @@
 import { CheerioInterface, load as parseHtml } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
-import { Plugin } from '@libs/plugin';
+import { Plugin, NovelInfo, ChapterInfo } from '@libs/plugin';
 
 class HexNovelsPlugin implements Plugin {
   id = 'hexnovels';
   name = 'HexNovels';
   icon = 'icons/russian/ranobehub.png';
   site = 'https://hexnovels.me';
-  version = '1.0.2';
+  version = '1.0.3';
 
   async popularNovels(pageNo: number, options: { searchTerm?: string }) {
     if (options.searchTerm) return this.searchNovels(options.searchTerm, pageNo);
@@ -15,7 +15,7 @@ class HexNovelsPlugin implements Plugin {
     const result = await fetchApi(url);
     const body = await result.text();
     const $ = parseHtml(body);
-    const novels: { name: string; cover: string; path: string }[] = [];
+    const novels: NovelInfo[] = [];
     $('.catalog-list .novel-card, .grid .card, a[href*="/novel/"]').each((_i, el) => {
       const name = $(el).find('.title, .novel-title, h3').text().trim();
       const cover = $(el).find('img').attr('src') || '';
@@ -26,7 +26,7 @@ class HexNovelsPlugin implements Plugin {
           name,
           cover: cover.startsWith('http') ? cover : this.site + cover,
           path,
-        });
+        } as NovelInfo);
       }
     });
     return novels;
@@ -37,7 +37,25 @@ class HexNovelsPlugin implements Plugin {
     const result = await fetchApi(url);
     const body = await result.text();
     const $: CheerioInterface = parseHtml(body);
-    const novel = {
+    
+    const genresList: string[] = [];
+    $('.genres a, .tags a').each((_i, el) => { genresList.push($(el).text().trim()) });
+
+    const chaptersList: ChapterInfo[] = [];
+    $('.chapters-list a, .chapter-item a, a[href*="/chapter/"]').each((_i, el) => {
+      const chapterName = $(el).text().trim();
+      const chapterUrl = $(el).attr('href') || '';
+      const chapterPath = chapterUrl.replace(this.site, '');
+      if (chapterName && chapterPath) {
+        chaptersList.push({ 
+          name: chapterName, 
+          path: chapterPath, 
+          releaseTime: '' 
+        } as ChapterInfo);
+      }
+    });
+
+    const novel: NovelInfo = {
       path: novelPath,
       name: $('.novel-header h1, h1.title').text().trim(),
       cover: $('.novel-cover img, .cover img').attr('src') || '',
@@ -45,22 +63,10 @@ class HexNovelsPlugin implements Plugin {
       author: $('.novel-author, .author-name').text().trim() || 'Неизвестен',
       artist: '',
       status: $('.novel-status').text().trim() || 'В процессе',
-      genres: '',
-      chapters: [] as { name: string; path: string; releaseTime: null }[],
+      genres: genresList.join(', '),
+      chapters: chaptersList.reverse(),
     };
-    const genresList: string[] = [];
-    $('.genres a, .tags a').each((_i, el) => { genresList.push($(el).text().trim()) });
-    novel.genres = genresList.join(', ');
-    const chaptersList: { name: string; path: string; releaseTime: null }[] = [];
-    $('.chapters-list a, .chapter-item a, a[href*="/chapter/"]').each((_i, el) => {
-      const chapterName = $(el).text().trim();
-      const chapterUrl = $(el).attr('href') || '';
-      const chapterPath = chapterUrl.replace(this.site, '');
-      if (chapterName && chapterPath) {
-        chaptersList.push({ name: chapterName, path: chapterPath, releaseTime: null });
-      }
-    });
-    novel.chapters = chaptersList.reverse();
+
     return novel;
   }
 
@@ -78,7 +84,7 @@ class HexNovelsPlugin implements Plugin {
     const result = await fetchApi(url);
     const body = await result.text();
     const $ = parseHtml(body);
-    const novels: { name: string; cover: string; path: string }[] = [];
+    const novels: NovelInfo[] = [];
     $('.catalog-list .novel-card, .grid .card, a[href*="/novel/"]').each((_i, el) => {
       const name = $(el).find('.title, .novel-title, h3').text().trim();
       const cover = $(el).find('img').attr('src') || '';
@@ -89,7 +95,7 @@ class HexNovelsPlugin implements Plugin {
           name,
           cover: cover.startsWith('http') ? cover : this.site + cover,
           path,
-        });
+        } as NovelInfo);
       }
     });
     return novels;
