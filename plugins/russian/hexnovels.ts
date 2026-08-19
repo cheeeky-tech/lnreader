@@ -8,7 +8,7 @@ class HexNovelsPlugin implements Plugin {
   name = 'HexNovels';
   icon = 'icons/russian/ranobehub.png'; // Берем готовую иконку из официального каталога
   site = 'https://hexnovels.me';
-  version = '1.0.0';
+  version = '1.0.1';
 
   async popularNovels(pageNo: number, options: { filters?: FilterToParse; searchTerm?: string }) {
     if (options.searchTerm) return this.searchNovels(options.searchTerm, pageNo);
