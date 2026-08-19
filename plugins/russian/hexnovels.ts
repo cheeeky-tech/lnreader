@@ -1,23 +1,22 @@
 import { CheerioInterface, load as parseHtml } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
-import { FilterToParse } from '@libs/filterInputs';
 import { Plugin } from '@libs/plugin';
 
 class HexNovelsPlugin implements Plugin {
   id = 'hexnovels';
   name = 'HexNovels';
-  icon = 'icons/russian/ranobehub.png'; // Берем готовую иконку из официального каталога
+  icon = 'icons/russian/ranobehub.png';
   site = 'https://hexnovels.me';
-  version = '1.0.1';
+  version = '1.0.2';
 
-  async popularNovels(pageNo: number, options: { filters?: FilterToParse; searchTerm?: string }) {
+  async popularNovels(pageNo: number, options: { searchTerm?: string }) {
     if (options.searchTerm) return this.searchNovels(options.searchTerm, pageNo);
     const url = `${this.site}/catalog?page=${pageNo}`;
     const result = await fetchApi(url);
     const body = await result.text();
     const $ = parseHtml(body);
-    const novels: any[] = [];
-    $('.catalog-list .novel-card, .grid .card, a[href*="/novel/"]').each((i, el) => {
+    const novels: { name: string; cover: string; path: string }[] = [];
+    $('.catalog-list .novel-card, .grid .card, a[href*="/novel/"]').each((_i, el) => {
       const name = $(el).find('.title, .novel-title, h3').text().trim();
       const cover = $(el).find('img').attr('src') || '';
       const urlAttr = $(el).attr('href') || '';
@@ -38,7 +37,7 @@ class HexNovelsPlugin implements Plugin {
     const result = await fetchApi(url);
     const body = await result.text();
     const $: CheerioInterface = parseHtml(body);
-    const novel: any = {
+    const novel = {
       path: novelPath,
       name: $('.novel-header h1, h1.title').text().trim(),
       cover: $('.novel-cover img, .cover img').attr('src') || '',
@@ -47,20 +46,21 @@ class HexNovelsPlugin implements Plugin {
       artist: '',
       status: $('.novel-status').text().trim() || 'В процессе',
       genres: '',
+      chapters: [] as { name: string; path: string; releaseTime: null }[],
     };
     const genresList: string[] = [];
-    $('.genres a, .tags a').each((i, el) => { genresList.push($(el).text().trim()) });
+    $('.genres a, .tags a').each((_i, el) => { genresList.push($(el).text().trim()) });
     novel.genres = genresList.join(', ');
-    const chapters: any[] = [];
-    $('.chapters-list a, .chapter-item a, a[href*="/chapter/"]').each((i, el) => {
+    const chaptersList: { name: string; path: string; releaseTime: null }[] = [];
+    $('.chapters-list a, .chapter-item a, a[href*="/chapter/"]').each((_i, el) => {
       const chapterName = $(el).text().trim();
       const chapterUrl = $(el).attr('href') || '';
       const chapterPath = chapterUrl.replace(this.site, '');
       if (chapterName && chapterPath) {
-        chapters.push({ name: chapterName, path: chapterPath, releaseTime: null });
+        chaptersList.push({ name: chapterName, path: chapterPath, releaseTime: null });
       }
     });
-    novel.chapters = chapters.reverse();
+    novel.chapters = chaptersList.reverse();
     return novel;
   }
 
@@ -78,8 +78,8 @@ class HexNovelsPlugin implements Plugin {
     const result = await fetchApi(url);
     const body = await result.text();
     const $ = parseHtml(body);
-    const novels: any[] = [];
-    $('.catalog-list .novel-card, .grid .card, a[href*="/novel/"]').each((i, el) => {
+    const novels: { name: string; cover: string; path: string }[] = [];
+    $('.catalog-list .novel-card, .grid .card, a[href*="/novel/"]').each((_i, el) => {
       const name = $(el).find('.title, .novel-title, h3').text().trim();
       const cover = $(el).find('img').attr('src') || '';
       const urlAttr = $(el).attr('href') || '';
