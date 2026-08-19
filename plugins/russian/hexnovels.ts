@@ -1,22 +1,23 @@
-// @ts-nocheck
 import { CheerioInterface, load as parseHtml } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@libs/plugin';
+import { NovelItem, SourceNovel, SourceChapter } from '@libs/types';
 
 class HexNovelsPlugin implements Plugin {
   id = 'hexnovels';
   name = 'HexNovels';
   icon = 'icons/russian/ranobehub.png';
   site = 'https://hexnovels.me';
-  version = '1.0.4';
+  version = '1.0.5';
 
-  async popularNovels(pageNo: number, options: { searchTerm?: string }) {
+  async popularNovels(pageNo: number, options: { searchTerm?: string }): Promise<NovelItem[]> {
     if (options.searchTerm) return this.searchNovels(options.searchTerm, pageNo);
     const url = `${this.site}/catalog?page=${pageNo}`;
     const result = await fetchApi(url);
     const body = await result.text();
     const $ = parseHtml(body);
-    const novels: any[] = [];
+    const novels: NovelItem[] = [];
+
     $('.catalog-list .novel-card, .grid .card, a[href*="/novel/"]').each((_i, el) => {
       const name = $(el).find('.title, .novel-title, h3').text().trim();
       const cover = $(el).find('img').attr('src') || '';
@@ -33,7 +34,7 @@ class HexNovelsPlugin implements Plugin {
     return novels;
   }
 
-  async parseNovel(novelPath: string) {
+  async parseNovel(novelPath: string): Promise<SourceNovel> {
     const url = `${this.site}${novelPath}`;
     const result = await fetchApi(url);
     const body = await result.text();
@@ -42,7 +43,7 @@ class HexNovelsPlugin implements Plugin {
     const genresList: string[] = [];
     $('.genres a, .tags a').each((_i, el) => { genresList.push($(el).text().trim()) });
 
-    const chaptersList: any[] = [];
+    const chaptersList: SourceChapter[] = [];
     $('.chapters-list a, .chapter-item a, a[href*="/chapter/"]').each((_i, el) => {
       const chapterName = $(el).text().trim();
       const chapterUrl = $(el).attr('href') || '';
@@ -56,7 +57,7 @@ class HexNovelsPlugin implements Plugin {
       }
     });
 
-    const novel: any = {
+    const novel: SourceNovel = {
       path: novelPath,
       name: $('.novel-header h1, h1.title').text().trim(),
       cover: $('.novel-cover img, .cover img').attr('src') || '',
@@ -71,7 +72,7 @@ class HexNovelsPlugin implements Plugin {
     return novel;
   }
 
-  async parseChapter(chapterPath: string) {
+  async parseChapter(chapterPath: string): Promise<string> {
     const url = `${this.site}${chapterPath}`;
     const result = await fetchApi(url);
     const body = await result.text();
@@ -80,12 +81,13 @@ class HexNovelsPlugin implements Plugin {
     return $('.chapter-content, .reader-body, .text-content').html() || 'Текст не найден';
   }
 
-  async searchNovels(searchTerm: string, pageNo: number) {
+  async searchNovels(searchTerm: string, pageNo: number): Promise<NovelItem[]> {
     const url = `${this.site}/catalog?search=${encodeURIComponent(searchTerm)}&page=${pageNo}`;
     const result = await fetchApi(url);
     const body = await result.text();
     const $ = parseHtml(body);
-    const novels: any[] = [];
+    const novels: NovelItem[] = [];
+
     $('.catalog-list .novel-card, .grid .card, a[href*="/novel/"]').each((_i, el) => {
       const name = $(el).find('.title, .novel-title, h3').text().trim();
       const cover = $(el).find('img').attr('src') || '';
